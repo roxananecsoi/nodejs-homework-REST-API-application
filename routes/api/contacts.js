@@ -1,17 +1,5 @@
 const express = require("express");
-const Joi = require("joi");
-
-const nameExistence = Joi.object({
-  name: Joi.string().required(),
-});
-
-const formatSchema = Joi.object({
-  name: Joi.string().pattern(/^[a-zA-Z\s-]+$/),
-  email: Joi.string().email({
-    minDomainSegments: 2,
-  }),
-  phone: Joi.string().pattern(/^[0-9\s\-()+]+$/),
-});
+const colors = require("colors");
 
 const {
   listContacts,
@@ -19,7 +7,8 @@ const {
   addContact,
   removeContact,
   updateContact,
-} = require("../../models/contacts.js");
+  updateStatusContact,
+} = require("../../controller/contactsController.js");
 
 const router = express.Router();
 
@@ -33,7 +22,7 @@ const STATUS_CODES = {
 };
 
 const respondWithError = (res, error) => {
-  console.error(error);
+  console.error(colors.bgRed.italic.bold(error));
   res.status(STATUS_CODES.error).json({ message: `${error}` });
 };
 
@@ -69,24 +58,6 @@ router.get("/:contactId", async (req, res, next) => {
 router.post("/", async (req, res, next) => {
   const { name, email, phone } = req.body;
 
-  const { error: existenceError } = nameExistence.validate({ name });
-
-  if (existenceError) {
-    res
-      .status(STATUS_CODES.badRequest)
-      .json({ message: "Name field is required" });
-    return;
-  }
-
-  const { error: formatError } = formatSchema.validate({ name, email, phone });
-
-  if (formatError) {
-    res
-      .status(STATUS_CODES.badRequest)
-      .json({ message: formatError.details[0].message });
-    return;
-  }
-
   try {
     const newContact = await addContact({ name, email, phone });
     res.status(STATUS_CODES.created).json(newContact);
@@ -116,17 +87,7 @@ router.delete("/:contactId", async (req, res, next) => {
 });
 
 router.put("/:contactId", async (req, res, next) => {
-  const { name, email, phone } = req.body;
   const contactId = req.params.contactId;
-
-  const { error: formatError } = formatSchema.validate({ name, email, phone });
-
-  if (formatError) {
-    res
-      .status(STATUS_CODES.badRequest)
-      .json({ message: formatError.details[0].message });
-    return;
-  }
 
   try {
     const updatedContact = await updateContact(req.body, contactId);
@@ -138,6 +99,27 @@ router.put("/:contactId", async (req, res, next) => {
       return;
     }
 
+    res.status(STATUS_CODES.success).json(updatedContact);
+  } catch (error) {
+    respondWithError(res, error);
+  }
+});
+
+router.patch("/:contactId/favorite", async (req, res) => {
+  const contactId = req.params.contactId;
+  const { favorite } = req.body;
+
+  if (favorite === undefined) {
+    return res
+      .status(STATUS_CODES.badRequest)
+      .json({ message: "missing field favorite" });
+  }
+
+  try {
+    const updatedContact = await updateStatusContact(contactId, { favorite });
+    if (!updatedContact) {
+      return res.status(STATUS_CODES.notFound).json({ message: "Not found" });
+    }
     res.status(STATUS_CODES.success).json(updatedContact);
   } catch (error) {
     respondWithError(res, error);
