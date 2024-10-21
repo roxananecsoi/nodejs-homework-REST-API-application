@@ -26,6 +26,7 @@ router.get("/", AuthController.validateAuth, async (req, res, next) => {
   const { page = 1, limit = 5, favorite } = req.query;
 
   try {
+    
     const favoriteFilter =
       favorite !== undefined ? favorite === "true" : undefined;
 
@@ -45,6 +46,7 @@ router.get("/", AuthController.validateAuth, async (req, res, next) => {
     respondWithError(res, error);
   }
 });
+
 
 router.get(
   "/:contactId",
@@ -66,6 +68,7 @@ router.get(
   }
 );
 
+
 router.post("/", AuthController.validateAuth, async (req, res, next) => {
   const { name, email, phone } = req.body;
   try {
@@ -75,6 +78,7 @@ router.post("/", AuthController.validateAuth, async (req, res, next) => {
     respondWithError(res, error);
   }
 });
+
 
 router.delete(
   "/:contactId",
@@ -98,6 +102,7 @@ router.delete(
   }
 );
 
+
 router.put(
   "/:contactId",
   AuthController.validateAuth,
@@ -117,6 +122,7 @@ router.put(
     }
   }
 );
+
 
 router.patch(
   "/:contactId/favorite",
