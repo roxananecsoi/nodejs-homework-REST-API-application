@@ -1,4 +1,4 @@
-const Contact = require("../models/contacts.js");
+const Contact = require("../models/contact.js");
 const colors = require("colors");
 
 const listContacts = async () => {
