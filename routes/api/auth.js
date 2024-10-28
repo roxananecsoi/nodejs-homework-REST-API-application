@@ -1,8 +1,10 @@
 const express = require("express");
-const AuthController = require("../../controllers/authController.js");
-const User = require("../../models/user.js");
 const colors = require("colors");
+const AuthController = require("../../controllers/authController.js");
 const UserController = require("../../controllers/userController.js");
+const FileController = require("../../controllers/fileController.js");
+const User = require("../../models/user.js");
+
 const router = express.Router();
 
 function validateSignupPayload(data) {
@@ -184,5 +186,23 @@ router.patch("/:userId", AuthController.validateAuth, async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 });
+
+router.patch(
+  "/avatars",
+  AuthController.validateAuth,
+  FileController.uploadFile,
+  async (req, res) => {
+    try {
+      console.log("Request received to upload avatar");
+
+      const response = await FileController.processAvatar(req, res);
+      console.log("Avatar upload successful:", response);
+      res.status(200).json(response);
+    } catch (error) {
+      console.error("Error uploading avatar:", error);
+      res.status(500).json({ message: "Error uploading avatar", error });
+    }
+  }
+);
 
 module.exports = router;

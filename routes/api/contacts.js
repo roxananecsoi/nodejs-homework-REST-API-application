@@ -1,9 +1,9 @@
 require("../../passport.js");
 
 const express = require("express");
-const colors = require("colors");
 const { STATUS_CODES } = require("../../utils/constants.js");
 const AuthController = require("../../controllers/authController.js");
+const { respondWithError } = require("../../utils/respondWithError.js");
 
 const {
   listContacts,
@@ -16,17 +16,10 @@ const {
 
 const router = express.Router();
 
-const respondWithError = (res, error) => {
-  console.error(colors.bgRed.italic.bold(error));
-  res.status(STATUS_CODES.error).json({ message: `${error}` });
-};
-
-
 router.get("/", AuthController.validateAuth, async (req, res, next) => {
   const { page = 1, limit = 5, favorite } = req.query;
 
   try {
-    
     const favoriteFilter =
       favorite !== undefined ? favorite === "true" : undefined;
 
@@ -46,7 +39,6 @@ router.get("/", AuthController.validateAuth, async (req, res, next) => {
     respondWithError(res, error);
   }
 });
-
 
 router.get(
   "/:contactId",
@@ -68,7 +60,6 @@ router.get(
   }
 );
 
-
 router.post("/", AuthController.validateAuth, async (req, res, next) => {
   const { name, email, phone } = req.body;
   try {
@@ -78,7 +69,6 @@ router.post("/", AuthController.validateAuth, async (req, res, next) => {
     respondWithError(res, error);
   }
 });
-
 
 router.delete(
   "/:contactId",
@@ -102,7 +92,6 @@ router.delete(
   }
 );
 
-
 router.put(
   "/:contactId",
   AuthController.validateAuth,
@@ -122,7 +111,6 @@ router.put(
     }
   }
 );
-
 
 router.patch(
   "/:contactId/favorite",
