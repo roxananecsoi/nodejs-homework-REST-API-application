@@ -16,13 +16,13 @@ const contactSchema = new Schema({
     trim: true,
     unique: true,
     required: true,
-    match: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, // Regex pentru validarea email-ului. Pentru validarea riguroasă a email-urilor, se poate utiliza o bibliotecă specializată.
+    match: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
   },
   phone: {
     type: String,
     validate: {
       validator: function (v) {
-        return phoneRegex.test(v); // Validare număr de telefon flexibilă
+        return phoneRegex.test(v);
       },
       message: (props) => `${props.value} is not a valid phone number!`,
     },
@@ -33,7 +33,7 @@ const contactSchema = new Schema({
   },
   owner: {
     type: Schema.Types.ObjectId,
-    ref: "user", // Referință la modelul 'User'
+    ref: "user",
   },
 });
 
