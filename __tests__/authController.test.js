@@ -1,114 +1,101 @@
-const passport = require("passport");
-const jwt = require("jsonwebtoken");
+const { login } = require("../controllers/authController.js");
 const User = require("../models/user.js");
-require("dotenv").config();
-const gravatar = require("gravatar");
+const jwt = require("jsonwebtoken");
 
-const AuthController = {
-  signup,
-  login,
-  validateAuth,
-  getPayloadFromJWT,
-};
+jest.mock("../models/user.js");
+jest.mock("jsonwebtoken");
 
-const secretForToken = process.env.TOKEN_SECRET;
+describe("AuthController - login", () => {
+  const secretForToken = "secret word";
 
-async function signup(data) {
-  const { email, password } = data;
-
-  if (!email || !password) {
-    throw new Error("Email and password are required");
-  }
-
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(email)) {
-    throw new Error("Invalid email format");
-  }
-
-  if (password.length < 8) {
-    throw new Error("Password must be at least 8 characters long");
-  }
-
-  const existingUser = await User.findOne({ email });
-  if (existingUser) {
-    throw new Error("Email in use");
-  }
-
-  const userAvatar = gravatar.url(email);
-
-  const newUser = new User({
-    email: email,
-    subscription: "starter",
-    token: null,
-    avatarURL: userAvatar,
+  beforeAll(() => {
+    process.env.TOKEN_SECRET = secretForToken;
   });
 
-  newUser.setPassword(password);
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
 
-  await newUser.save();
+  it("should return a token and user for valid credentials", async () => {
+    const email = "test@example.com";
+    const password = "validPassword";
+    const userId = "userId123";
+    const token = "testToken";
 
-  return newUser;
-}
+    const userMock = {
+      _id: userId,
+      email: email,
+      subscription: "starter",
+      validPassword: jest.fn().mockReturnValue(true),
+      save: jest.fn(),
+    };
 
-async function login(data) {
-  const { email, password } = data;
+    User.findOne.mockResolvedValue(userMock);
+    jwt.sign.mockReturnValue(token);
 
-  if (!email || !password) {
-    throw new Error("Email and password are required");
-  }
+    const data = { email, password };
 
-  const user = await User.findOne({ email });
-  if (!user) {
-    throw new Error("Email or password is wrong");
-  }
+    const result = await login(data);
 
-  const passwordMatch = user.validPassword(password);
-  if (!passwordMatch) {
-    throw new Error("Email or password is wrong");
-  }
+    expect(result).toHaveProperty("token");
+    expect(result.token).toBe(token);
 
-  const token = jwt.sign(
-    {
-      userId: user._id,
-    },
-    secretForToken,
-    {
+    expect(result).toHaveProperty("user");
+    expect(result.user.email).toBe(email);
+    expect(result.user.subscription).toBe("starter");
+
+    expect(User.findOne).toHaveBeenCalledWith({ email: email, verify: true });
+    expect(userMock.validPassword).toHaveBeenCalledWith(password);
+    expect(jwt.sign).toHaveBeenCalledWith({ userId: userId }, secretForToken, {
       expiresIn: "1h",
-    }
-  );
+    });
+    expect(userMock.save).toHaveBeenCalled();
+  });
 
-  user.token = token;
-  await user.save();
+  it("should throw an error if email is not provided", async () => {
+    const data = { password: "validPassword" };
 
-  return { token, user };
-}
+    await expect(login(data)).rejects.toThrow(
+      "Email and password are required"
+    );
+  });
 
-function getPayloadFromJWT(token) {
-  try {
-    const payload = jwt.verify(token, secretForToken);
+  it("should throw an error if password is not provided", async () => {
+    const data = { email: "test@example.com" };
 
-    return payload;
-  } catch (err) {
-    console.error(err);
-  }
-}
+    await expect(login(data)).rejects.toThrow(
+      "Email and password are required"
+    );
+  });
 
-function validateAuth(req, res, next) {
-  console.log("validateAuth middleware called");
-  passport.authenticate("jwt", { session: false }, (err, user) => {
-    if (!user || err) {
-      console.log("Unauthorized request");
-      return res.status(401).json({
-        status: "error",
-        code: 401,
-        message: "Unauthorized",
-        data: "Unauthorized",
-      });
-    }
-    console.log("User authenticated:", user);
-    req.user = user;
-    next();
-  })(req, res, next);
-}
+  it("should throw an error if user is not found", async () => {
+    const email = "test@example.com";
+    const password = "validPassword";
 
-module.exports = AuthController;
+    User.findOne.mockResolvedValue(null);
+
+    const data = { email, password };
+
+    await expect(login(data)).rejects.toThrow("Email or password is wrong");
+
+    expect(User.findOne).toHaveBeenCalledWith({ email: email, verify: true });
+  });
+
+  it("should throw an error if password is incorrect", async () => {
+    const email = "test@example.com";
+    const password = "wrongPassword";
+
+    const userMock = {
+      validPassword: jest.fn().mockReturnValue(false),
+    };
+
+    User.findOne.mockResolvedValue(userMock);
+
+    const data = { email, password };
+
+    await expect(login(data)).rejects.toThrow("Email or password is wrong");
+
+    expect(User.findOne).toHaveBeenCalledWith({ email: email, verify: true });
+    expect(userMock.validPassword).toHaveBeenCalledWith(password);
+  });
+});
