@@ -13,7 +13,6 @@ const params = {
   jwtFromRequest: ExtractJWT.fromAuthHeaderAsBearerToken(),
 };
 
-
 passport.use(
   new Strategy(params, function (payload, done) {
     User.findById(payload.userId)

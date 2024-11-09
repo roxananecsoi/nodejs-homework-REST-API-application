@@ -3,12 +3,16 @@ const jwt = require("jsonwebtoken");
 const User = require("../models/user.js");
 require("dotenv").config();
 const gravatar = require("gravatar");
+const { v4: uuidv4 } = require("uuid");
+const sendWithSendGrid = require("../utils/sendEmail.js");
 
 const AuthController = {
   signup,
   login,
   validateAuth,
   getPayloadFromJWT,
+  getUserByValidationToken,
+  updateToken,
 };
 
 const secretForToken = process.env.TOKEN_SECRET;
@@ -36,12 +40,19 @@ async function signup(data) {
 
   const userAvatar = gravatar.url(email);
 
+  const token = uuidv4();
+
   const newUser = new User({
     email: email,
     subscription: "starter",
     token: null,
     avatarURL: userAvatar,
+
+    verificationToken: token,
+    verify: false,
   });
+
+  sendWithSendGrid(email, token);
 
   newUser.setPassword(password);
 
@@ -57,7 +68,8 @@ async function login(data) {
     throw new Error("Email and password are required");
   }
 
-  const user = await User.findOne({ email });
+  const user = await User.findOne({ email: email, verify: true });
+
   if (!user) {
     throw new Error("Email or password is wrong");
   }
@@ -109,6 +121,27 @@ function validateAuth(req, res, next) {
     req.user = user;
     next();
   })(req, res, next);
+}
+
+async function getUserByValidationToken(token) {
+  const user = await User.findOne({
+    verificationToken: token,
+    verify: false,
+  });
+
+  if (user) {
+    return true;
+  }
+
+  return false;
+}
+
+async function updateToken(email, token) {
+  token = token || uuidv4();
+
+  await User.findOneAndUpdate({ email: email }, { verificationToken: token });
+
+  sendWithSendGrid(email, token);
 }
 
 module.exports = AuthController;

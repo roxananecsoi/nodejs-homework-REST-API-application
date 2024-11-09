@@ -1,5 +1,8 @@
+
+
 const Contact = require("../models/contact.js");
 const colors = require("colors");
+
 
 const listContacts = async (page = 1, limit = 5, favorite) => {
   try {
@@ -23,6 +26,7 @@ const listContacts = async (page = 1, limit = 5, favorite) => {
   }
 };
 
+
 const getContactById = async (contactId) => {
   try {
     console.log(
@@ -34,6 +38,7 @@ const getContactById = async (contactId) => {
     throw new Error(`Error getting contact by id: ${error.message}`);
   }
 };
+
 
 const removeContact = async (contactId) => {
   try {
@@ -49,6 +54,7 @@ const removeContact = async (contactId) => {
   }
 };
 
+:
 const addContact = async (contact) => {
   console.log(colors.bgYellow.italic.bold(`---  New Contact Created: ---`));
   try {
@@ -58,6 +64,7 @@ const addContact = async (contact) => {
     throw new Error(`Error adding contact: ${error.message}`);
   }
 };
+
 
 const updateContact = async (updatedContact, contactId) => {
   console.log(
